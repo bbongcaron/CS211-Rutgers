@@ -1,10 +1,10 @@
 #ifndef IO_H
 #define IO_H
 
-  int ax;
-  int bx;
-  int cx;
-  int dx;
+  short ax;
+  short bx;
+  short cx;
+  short dx;
 
   void read(char*);
   void print(char*);

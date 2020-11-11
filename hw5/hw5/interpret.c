@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
   /* Pointer to the end of the assembly program */
   int lastLine = makeProgram(asm, program);
   //printProgram(program,lastLine);
-  runProgram(program, lastLine)
+  runProgram(program, lastLine);
   /* new line for formatting purposes */
   printf("\n");
   /* Free all malloc'ed portions of program */

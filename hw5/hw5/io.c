@@ -7,19 +7,19 @@ void read(char* x)
 {
   if (strcmp(x, "ax") == 0)
   {
-    scanf("%d", &ax);
+    scanf("%hi", &ax);
   }
   else if (strcmp(x, "bx") == 0)
   {
-    scanf("%d", &bx);
+    scanf("%hi", &bx);
   }
   else if (strcmp(x, "cx") == 0)
   {
-    scanf("%d", &cx);
+    scanf("%hi", &cx);
   }
   else if (strcmp(x, "dx") == 0)
   {
-    scanf("%d", &dx);
+    scanf("%hi", &dx);
   }
   return;
 }
@@ -28,23 +28,23 @@ void print(char* x)
 {
   if (strcmp(x, "ax") == 0)
   {
-    printf("%d", ax);
+    printf("%hi", ax);
   }
   else if (strcmp(x, "bx") == 0)
   {
-    printf("%d", bx);
+    printf("%hi", bx);
   }
   else if (strcmp(x, "cx") == 0)
   {
-    printf("%d", cx);
+    printf("%hi", cx);
   }
   else if (strcmp(x, "dx") == 0)
   {
-    printf("%d", dx);
+    printf("%hi", dx);
   }
   else
   {
-    printf("%d", *x);
+    printf("%hi", *x);
   }
   return;
 }
