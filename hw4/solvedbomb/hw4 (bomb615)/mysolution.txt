@@ -1,0 +1,7 @@
+I can see Russia from my house!
+0 1 1 2 3 5
+1 f 258
+162 3 DrEvil
+pqrstx
+5 2 1 4 3 6
+22
