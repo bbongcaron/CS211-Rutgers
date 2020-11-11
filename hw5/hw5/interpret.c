@@ -2,34 +2,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include "instruction.h"
-/*
- *  @resetTemps   resets temporary variables used in building program[]
- */
+#include "io.h"
+
 void resetTemps(char* action, char* arg1, char* arg2, char* arg3);
-/*
- *  @makeProgram  builds program[] based off .asm file
- */
 int makeProgram(FILE* asm, Instruction* program[]);
-/*
- *  @freeProgram  frees all malloc'ed potions of program[]
- */
-void freeProgram(Instruction* program[], int endOfProgram);
+void runProgram(Instruction* program[], int lastLine);
+void printProgram(Instruction* program[], int lastLine);
+void freeProgram(Instruction* program[], int lastLine);
 
 int main(int argc, char* argv[])
 {
   /* Array of instructions representing a .asm file */
   Instruction* program[101];
-  /* Pointer to the current line in the assembly program */
-  //int currentLine = 1;
+
   /* Assembly file to be scanned */
   FILE* asm = fopen(argv[1], "r");
 
   /* Pointer to the end of the assembly program */
-  int endOfProgram = makeProgram(asm, program);
-
+  int lastLine = makeProgram(asm, program);
+  //printProgram(program,lastLine);
+  runProgram(program, lastLine)
+  /* new line for formatting purposes */
+  printf("\n");
   /* Free all malloc'ed portions of program */
-  freeProgram(program, endOfProgram);
-
+  freeProgram(program,lastLine);
 }
 
 void resetTemps(char* action, char* arg1, char* arg2, char* arg3)
@@ -50,7 +46,7 @@ int makeProgram(FILE* asm, Instruction* program[])
   char arg2[6] = "\0";
   char arg3[6] = "\0";
   /* Pointer to end of program */
-  int endOfProgram = 1;
+  int lastLine = 1;
   /* Go through each line of the .asm file */
   while(fgets(line, 100, asm) != NULL)
   {
@@ -86,21 +82,43 @@ int makeProgram(FILE* asm, Instruction* program[])
     Instruction* i = NULL;
     createInstruction(&i, action, arg1, arg2, arg3);
     /* Add Instruction i to program[endOfProgram] */
-    program[endOfProgram] = i;
+    program[lastLine] = i;
     /* Update endOfProgram */
-    endOfProgram++;
+    lastLine++;
     /* Reset temporary variables */
     resetTemps(action, arg1, arg2, arg3);
   }
-  return endOfProgram;
+  return lastLine;
 }
 
-void freeProgram(Instruction* program[], int endOfProgram)
+void runProgram(Instruction* program[], int lastLine)
 {
-  for (int x = 1; x < endOfProgram; x++)
+  for (int currentLine = 1; currentLine < lastLine; currentLine++)
   {
-    /* Comment out code printing as necessary */
+    if (strcmp(program[currentLine]->action, "read") == 0)
+    {
+      read(program[currentLine]->arg1);
+    }
+    else if (strcmp(program[currentLine]->action, "print") == 0)
+    {
+      print(program[currentLine]->arg1);
+    }
+  }
+  return;
+}
+
+void printProgram(Instruction* program[], int lastLine)
+{
+  for (int x = 1; x < lastLine; x++)
+  {
     printf("%d | %s %s %s %s\n", x, program[x]->action, program[x]->arg1, program[x]->arg2, program[x]->arg3);
+  }
+}
+
+void freeProgram(Instruction* program[], int lastLine)
+{
+  for (int x = 1; x < lastLine; x++)
+  {
     freeInstruction(&program[x]);
   }
   return;

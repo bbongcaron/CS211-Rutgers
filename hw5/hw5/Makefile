@@ -1,5 +1,5 @@
 OUTPUT=interpret
-OBJECTS=interpret.o instruction.o
+OBJECTS=interpret.o instruction.o io.o
 CFLAGS=-g -Wall -fsanitize=address -std=c99
 LFLAGS=-lm
 
@@ -12,7 +12,7 @@ LFLAGS=-lm
 all: $(OUTPUT)
 
 interpret: $(OBJECTS)
-	gcc $(CFLAGS) -o $@ $^ $(LFLAGS)
+	gcc $(CFLAGS) -g -o $@ $^ $(LFLAGS)
 
 clean:
 	rm -f *.o $(OUTPUT)
