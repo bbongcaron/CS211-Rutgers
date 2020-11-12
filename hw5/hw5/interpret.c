@@ -8,19 +8,21 @@
 
 void resetTemps(char* action, char* arg1, char* arg2, char* arg3);
 int makeProgram(FILE* asm, Instruction* program[]);
+void printProgram(Instruction* program[], int lastLine);
 void runProgram(Instruction* program[], int lastLine);
 void freeProgram(Instruction* program[], int lastLine);
 
 int main(int argc, char* argv[])
 {
   /* Array of instructions representing a .asm file */
-  Instruction* program[101];
+  Instruction* program[100];
 
   /* Assembly file to be scanned */
   FILE* asm = fopen(argv[1], "r");
 
   /* Pointer to the end of the assembly program */
   int lastLine = makeProgram(asm, program);
+  //printProgram(program,lastLine);
   /* Run the assembly program */
   runProgram(program, lastLine);
   /* new line for formatting purposes */
@@ -47,7 +49,7 @@ int makeProgram(FILE* asm, Instruction* program[])
   char arg2[6] = "\0";
   char arg3[6] = "\0";
   /* Pointer to end of program */
-  int lastLine = 1;
+  int lastLine = 0;
   /* Go through each line of the .asm file */
   while(fgets(line, 100, asm) != NULL)
   {
@@ -55,6 +57,11 @@ int makeProgram(FILE* asm, Instruction* program[])
     /* If statement checks for empty lines */
     if (!token)
     {
+      /* Create a "no op" instruction */
+      Instruction* i = NULL;
+      createInstruction(&i, "\0", "\0", "\0", "\0");
+      program[lastLine] = i;
+      lastLine++;
       continue;
     }
     strcpy(action, token);
@@ -94,9 +101,13 @@ int makeProgram(FILE* asm, Instruction* program[])
 
 void runProgram(Instruction* program[], int lastLine)
 {
-  for (int currentLine = 1; currentLine < lastLine; currentLine++)
+  for (int currentLine = 0; currentLine < lastLine; currentLine++)
   {
-    if (strcmp(program[currentLine]->action, "read") == 0)
+    if (strcmp(program[currentLine]->action, "\0") == 0)
+    {
+        continue;
+    }
+    else if (strcmp(program[currentLine]->action, "read") == 0)
     {
       read(program[currentLine]->arg1);
     }
@@ -174,9 +185,18 @@ void runProgram(Instruction* program[], int lastLine)
   return;
 }
 
+void printProgram(Instruction* program[], int lastLine)
+{
+  for (int x = 0; x < lastLine; x++)
+  {
+    printf("%d | %s %s %s %s\n", x, program[x]->action, program[x]->arg1, program[x]->arg2, program[x]->arg3);
+  }
+  return;
+}
+
 void freeProgram(Instruction* program[], int lastLine)
 {
-  for (int x = 1; x < lastLine; x++)
+  for (int x = 0; x < lastLine; x++)
   {
     freeInstruction(&program[x]);
   }
