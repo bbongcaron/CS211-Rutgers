@@ -1,6 +1,6 @@
 read cx
 read dx
-jg 5 dx cx
+jge 5 7 7
 mul dx cx
 print cx
 
