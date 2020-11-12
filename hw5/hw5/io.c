@@ -44,7 +44,7 @@ void print(char* x)
   }
   else
   {
-    printf("%hi", *x);
+    printf("%hi", atoi(x));
   }
   return;
 }

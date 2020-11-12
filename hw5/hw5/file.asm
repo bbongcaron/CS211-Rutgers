@@ -1,6 +1,3 @@
-read cx
-read dx
-jge 5 7 7
-mul dx cx
-print cx
-
+read ax
+mul 2 ax
+print ax

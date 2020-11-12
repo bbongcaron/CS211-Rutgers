@@ -157,6 +157,20 @@ void runProgram(Instruction* program[], int lastLine)
         currentLine = atoi(program[currentLine]->arg1) - 1;
       }
     }
+    else if (strcmp(program[currentLine]->action, "jl") == 0)
+    {
+      if (jl(program[currentLine]->arg2, program[currentLine]->arg3))
+      {
+        currentLine = atoi(program[currentLine]->arg1) - 1;
+      }
+    }
+    else if (strcmp(program[currentLine]->action, "jle") == 0)
+    {
+      if (jle(program[currentLine]->arg2, program[currentLine]->arg3))
+      {
+        currentLine = atoi(program[currentLine]->arg1) - 1;
+      }
+    }
   }
   return;
 }
