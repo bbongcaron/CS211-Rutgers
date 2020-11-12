@@ -1,8 +1,4 @@
-read ax
-move ax bx
-move bx cx
-move cx dx
-print ax
-print bx
+read cx
+read dx
+mul dx cx
 print cx
-print dx

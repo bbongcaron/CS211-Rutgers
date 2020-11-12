@@ -3,6 +3,7 @@
 #include <string.h>
 #include "instruction.h"
 #include "io.h"
+#include "arithmetic.h"
 
 void resetTemps(char* action, char* arg1, char* arg2, char* arg3);
 int makeProgram(FILE* asm, Instruction* program[]);
@@ -106,6 +107,22 @@ void runProgram(Instruction* program[], int lastLine)
     else if (strcmp(program[currentLine]->action, "move") == 0)
     {
       move(program[currentLine]->arg1, program[currentLine]->arg2);
+    }
+    else if (strcmp(program[currentLine]->action, "add") == 0)
+    {
+      add(program[currentLine]->arg1, program[currentLine]->arg2);
+    }
+    else if (strcmp(program[currentLine]->action, "sub") == 0)
+    {
+      sub(program[currentLine]->arg1, program[currentLine]->arg2);
+    }
+    else if (strcmp(program[currentLine]->action, "mul") == 0)
+    {
+      mul(program[currentLine]->arg1, program[currentLine]->arg2);
+    }
+    else if (strcmp(program[currentLine]->action, "div") == 0)
+    {
+      divide(program[currentLine]->arg1, program[currentLine]->arg2);
     }
   }
   return;
