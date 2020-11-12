@@ -9,7 +9,6 @@
 void resetTemps(char* action, char* arg1, char* arg2, char* arg3);
 int makeProgram(FILE* asm, Instruction* program[]);
 void runProgram(Instruction* program[], int lastLine);
-void printProgram(Instruction* program[], int lastLine);
 void freeProgram(Instruction* program[], int lastLine);
 
 int main(int argc, char* argv[])
@@ -22,7 +21,7 @@ int main(int argc, char* argv[])
 
   /* Pointer to the end of the assembly program */
   int lastLine = makeProgram(asm, program);
-  printProgram(program,lastLine);
+  /* Run the assembly program */
   runProgram(program, lastLine);
   /* new line for formatting purposes */
   printf("\n");
@@ -173,14 +172,6 @@ void runProgram(Instruction* program[], int lastLine)
     }
   }
   return;
-}
-
-void printProgram(Instruction* program[], int lastLine)
-{
-  for (int x = 1; x < lastLine; x++)
-  {
-    printf("%d | %s %s %s %s\n", x, program[x]->action, program[x]->arg1, program[x]->arg2, program[x]->arg3);
-  }
 }
 
 void freeProgram(Instruction* program[], int lastLine)
