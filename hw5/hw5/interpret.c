@@ -4,6 +4,7 @@
 #include "instruction.h"
 #include "io.h"
 #include "arithmetic.h"
+#include "jump.h"
 
 void resetTemps(char* action, char* arg1, char* arg2, char* arg3);
 int makeProgram(FILE* asm, Instruction* program[]);
@@ -123,6 +124,31 @@ void runProgram(Instruction* program[], int lastLine)
     else if (strcmp(program[currentLine]->action, "div") == 0)
     {
       divide(program[currentLine]->arg1, program[currentLine]->arg2);
+    }
+    else if (strcmp(program[currentLine]->action, "jmp") == 0)
+    {
+      currentLine = atoi(program[currentLine]->arg1) - 1;
+    }
+    else if (strcmp(program[currentLine]->action, "je") == 0)
+    {
+      if (je(program[currentLine]->arg2, program[currentLine]->arg3))
+      {
+        currentLine = atoi(program[currentLine]->arg1) - 1;
+      }
+    }
+    else if (strcmp(program[currentLine]->action, "jne") == 0)
+    {
+      if (jne(program[currentLine]->arg2, program[currentLine]->arg3))
+      {
+        currentLine = atoi(program[currentLine]->arg1) - 1;
+      }
+    }
+    else if (strcmp(program[currentLine]->action, "jg") == 0)
+    {
+      if (jg(program[currentLine]->arg2, program[currentLine]->arg3))
+      {
+        currentLine = atoi(program[currentLine]->arg1) - 1;
+      }
     }
   }
   return;

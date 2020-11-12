@@ -1,5 +1,5 @@
 OUTPUT=interpret
-OBJECTS=interpret.o instruction.o io.o arithmetic.o
+OBJECTS=interpret.o instruction.o io.o arithmetic.o jump.o
 CFLAGS=-g -Wall -fsanitize=address -std=c99
 LFLAGS=-lm
 
