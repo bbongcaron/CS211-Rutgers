@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 
   /* Pointer to the end of the assembly program */
   int lastLine = makeProgram(asm, program);
-  //printProgram(program,lastLine);
+  printProgram(program,lastLine);
   runProgram(program, lastLine);
   /* new line for formatting purposes */
   printf("\n");
@@ -102,6 +102,10 @@ void runProgram(Instruction* program[], int lastLine)
     else if (strcmp(program[currentLine]->action, "print") == 0)
     {
       print(program[currentLine]->arg1);
+    }
+    else if (strcmp(program[currentLine]->action, "move") == 0)
+    {
+      move(program[currentLine]->arg1, program[currentLine]->arg2);
     }
   }
   return;

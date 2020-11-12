@@ -8,5 +8,6 @@
 
   void read(char*);
   void print(char*);
+  void move(char*, char*);
 
 #endif
