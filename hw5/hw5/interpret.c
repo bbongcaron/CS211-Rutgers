@@ -115,7 +115,7 @@ void runProgram(Instruction* program[], int lastLine)
     {
       print(program[currentLine]->arg1);
     }
-    else if (strcmp(program[currentLine]->action, "move") == 0)
+    else if (strcmp(program[currentLine]->action, "mov") == 0)
     {
       move(program[currentLine]->arg1, program[currentLine]->arg2);
     }

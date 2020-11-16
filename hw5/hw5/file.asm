@@ -1,7 +1,12 @@
-read cx
-jle 7 cx 0
-
-print 0
-sub 1 cx
-jle 7 cx 0
-jmp 3
+read ax
+read bx
+jge 5 ax bx
+add ax bx
+jmp 11
+jle 8 ax bx
+div ax bx
+jmp 11
+jne 11 ax bx
+mul ax bx
+jmp 11
+print bx

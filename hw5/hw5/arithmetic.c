@@ -263,74 +263,90 @@ void divide(char* x, char* y)
 {
   if (strcmp(y, "ax") == 0)
   {
-    if (strcmp(x, "bx") == 0)
+    if (strcmp(x, "ax") == 0)
     {
-      ax /= bx;
+      ax = 1;
+    }
+    else if (strcmp(x, "bx") == 0)
+    {
+      ax = bx / ax;
     }
     else if (strcmp(x, "cx") == 0)
     {
-      ax /= cx;
+      ax = cx / ax;
     }
     else if (strcmp(x, "dx") == 0)
     {
-      ax /= dx;
+      ax = dx / ax;
     }
     else
     {
-      ax /= atoi(x);
+      ax = atoi(x) / ax;
     }
   }
   else if (strcmp(y, "bx") == 0)
   {
     if (strcmp(x, "ax") == 0)
     {
-      bx /= ax;
+      bx = ax / bx;
+    }
+    else if (strcmp(x, "bx") == 0)
+    {
+      bx = 1;
     }
     else if (strcmp(x, "cx") == 0)
     {
-      bx /= cx;
+      bx = cx / bx;
     }
     else if (strcmp(x, "dx") == 0)
     {
-      bx /= dx;
+      bx = dx / bx;
     }
     else
     {
-      bx /= atoi(x);
+      bx = atoi(x) / bx;
     }
   }
   else if (strcmp(y, "cx") == 0)
   {
     if (strcmp(x, "ax") == 0)
     {
-      cx /= ax;
+      cx = ax / cx;
     }
     else if (strcmp(x, "bx") == 0)
     {
-      cx /= bx;
+      cx = bx / cx;
+    }
+    else if (strcmp(x, "cx") == 0)
+    {
+      cx = 1;
     }
     else if (strcmp(x, "dx") == 0)
     {
-      cx /= dx;
+      cx = dx / cx;
     }
     else
     {
-      cx /= atoi(x);
+      cx = atoi(x) / cx;
     }
   }
   else if (strcmp(y, "dx") == 0)
   {
     if (strcmp(x, "ax") == 0)
     {
-      dx /= ax;
+      dx = ax / dx;
     }
     else if (strcmp(x, "bx") == 0)
     {
-      dx /= bx;
+      dx = bx / dx;
     }
     else if (strcmp(x, "cx") == 0)
     {
-      dx /= cx;
+      dx = cx / dx;
+    }
+    else if (strcmp(x, "dx") == 0)
+    {
+      dx = 1;
     }
     else
     {
