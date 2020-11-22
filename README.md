@@ -5,3 +5,4 @@ hw2 (100/100) : Machine Learning with C
 hw3 (97/100) : Bit Manipulation  
 hw4 (120/100) : Bomb Lab!!!  
 hw5 : Assembly Interpreter  
+hw6 : Cache Simulator
