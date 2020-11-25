@@ -4,10 +4,11 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+
 bool isPowerOf2(int num);
 bool isInt(char* num);
 bool isLegit(char* cacheSize, char* associativity, char* replacePolicy, char* blockSize);
-void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile);
+void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile, char* associativity);
 int getBit(int x, int n);
 void setBit(int* x, int n, int v);
 
@@ -15,6 +16,27 @@ int memReads = 0;
 int memWrites = 0;
 int cacheHits = 0;
 int cacheMiss = 0;
+
+typedef struct Line
+{
+  bool valid;
+  int tag;
+  int data;
+}Line;
+
+typedef struct Set
+{
+  int numValidLines;
+  Line* lines;
+  int* lfu;
+  int* fifo;
+}Set;
+
+typedef struct Cache{
+  int numSets;
+  int linesPerSet;
+  Set* sets;
+}Cache;
 
 int main(int argc, char* argv[])
 {
@@ -29,19 +51,8 @@ int main(int argc, char* argv[])
   int blockSize = atoi(argv[4]);
   FILE* traceFile = fopen(argv[5], "r");
 
+  simulateCache(cacheSize, blockSize, replacePolicy, traceFile, associativity);
 
-  if (strcmp(associativity, "direct") == 0)
-  {
-    directCache(cacheSize, blockSize, replacePolicy, traceFile);
-  }
-  else if (strcmp(associativity, "assoc") == 0)
-  {
-
-  }
-  else
-  {
-
-  }
   printf("Memory reads: %d\n", memReads);
   printf("Memory writes: %d\n", memWrites);
   printf("Cache hits: %d\n", cacheHits);
@@ -154,30 +165,77 @@ void printBits(int x, int length)
   printf(" = %d\n", x);
 }
 
-void freeCache(int*** cache, int numSets, int linesPerSet)
+void freeCache(Cache cache)
 {
+  for (int i = 0; i < cache.numSets; i++)
+  {
+    free(cache.sets[i].lfu);
+    free(cache.sets[i].fifo);
+    free(cache.sets[i].lines);
+  }
+  free(cache.sets);
+}
+
+Cache initializeCache(int numSets, int linesPerSet)
+{
+  Cache cache;
+  cache.numSets = numSets;
+  cache.sets = malloc(sizeof(Set)*numSets);
   for (int i = 0; i < numSets; i++)
   {
+    cache.sets[i].lfu = malloc(sizeof(int)*linesPerSet);
+    cache.sets[i].fifo = malloc(sizeof(int)*linesPerSet);
+    cache.sets[i].numValidLines = 0;
+    cache.sets[i].lines = malloc(sizeof(Line)*linesPerSet);
     for (int j = 0; j < linesPerSet; j++)
     {
-      free(cache[i][j]);
+      cache.sets[i].lines[j].valid = false;
+      cache.sets[i].lines[j].tag = 0;
+      cache.sets[i].lines[j].data = 0;
     }
-    free(cache[i]);
   }
-  free(cache);
+  return cache;
 }
-void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile)
+
+void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile, char* associativity)
 {
   // 12 bytes (48-bit) memory addresses
   // 1 LINE PER SET IN A DIRECT CACHE
-  int linesPerSet = 1; //property of directCache
-  int numSets = (cacheSize) / (linesPerSet*blockSize);
-  int setBits = log10(numSets) / log10(2);
-  int dataBits = log10(blockSize) / log10(2);
-  int tagBits = 48 - setBits - dataBits;
+  int linesPerSet;
+  int numSets;
+  int setBits;
+  int dataBits;
+  int tagBits;
+  if (strcmp(associativity, "direct") == 0)
+  {
+    linesPerSet = 1; // property of directCache
+    numSets = (cacheSize) / (linesPerSet*blockSize);
+  }
+  else if (strcmp(associativity, "assoc") == 0) {
+    // only 1 set, no set bits required
+    numSets = 1; // property of fully associative cache
+    linesPerSet = (cacheSize) / (numSets*blockSize);
+  }
+  else
+  {
+    char* token = strtok(associativity, ":");
+    token = strtok(NULL, ":");
+    linesPerSet = atoi(token);
+    //printf("assoc:%d\n", linesPerSet);
+    numSets = (cacheSize) / (linesPerSet*blockSize);
+  }
+  setBits = log10(numSets) / log10(2);
+  dataBits = log10(blockSize) / log10(2);
+  tagBits = 48 - setBits - dataBits;
   /*
     Initialize Cache
   */
+  Cache cache = initializeCache(numSets, linesPerSet);
+  //printf("%d %d %d\n", cache.sets[0].numValidLines = 30, cache.sets[0].lines[0].tag = 60, cache.sets[0].lines[0].data = 90);
+
+  freeCache(cache);
+  return;
+  /*
   int*** cache = malloc(sizeof(int**)*numSets);
   for (int i = 0; i < numSets; i++)
   {
@@ -199,6 +257,7 @@ void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceF
   int programCount = 0;
   char action = '\0';
   int cacheData = 0;
+
   while (fscanf(traceFile, "%X: %c %X", &programCount, &action, &cacheData))
   {
     // printf("0x%X: %c 0x%X\n", programCount, action, cacheData);
@@ -206,13 +265,13 @@ void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceF
     // length shows the length up to which the rest of tag is all zeros
     char hexString[13] = "\0";
     sprintf(hexString, "%X", cacheData);
-    /* Get the set # that the data will be stored in */
+    // Get the set # that the data will be stored in //
     int setIndex = 0;
     for (int i = dataBits; i <= 47 - tagBits; i++)
     {
       setBit(&setIndex, i - dataBits, getBit(cacheData, i));
     }
-    /* Get the tag of the data */
+    // Get the tag of the data //
     int tag = 0;
     for (int i = dataBits + setBits; i < 4*strlen(hexString); i++)
     {
@@ -220,7 +279,7 @@ void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceF
     }
     //printf("tag of %x : \t", cacheData);
     //printBits(tag, 4*strlen(hexString));
-    /* Search for tag in set setIndex */
+    // Search for tag in set setIndex //
     bool hit = false;
     int currentLine = -1;
     for (int i = 0; i < linesPerSet; i++)
@@ -267,4 +326,5 @@ void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceF
   }
 
   freeCache(cache, numSets, linesPerSet);
+  */
 }
