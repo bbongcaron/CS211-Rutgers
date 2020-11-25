@@ -42,6 +42,10 @@ int main(int argc, char* argv[])
   {
 
   }
+  printf("Memory reads: %d\n", memReads);
+  printf("Memory writes: %d\n", memWrites);
+  printf("Cache hits: %d\n", cacheHits);
+  printf("Cache misses: %d\n", cacheMiss);
   fclose(traceFile);
   return 0;
 }
@@ -183,8 +187,13 @@ void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceF
       // cache[i][j][0] is the valid bit in set i, line j
       // cache[i][j][1] is the tag in set i, line j
       // cache[i][j][2] is the data in set i, line j
+        // although data isn't implemented in a trace
       cache[i][j] = malloc(sizeof(int)*3);
-      cache[i][j][0] = 0;  //cache starts cold
+      for (int k = 0; k < 3; k++)
+      {
+        cache[i][j][k] = 0;
+      }
+
     }
   }
   int programCount = 0;
@@ -211,28 +220,49 @@ void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceF
     }
     //printf("tag of %x : \t", cacheData);
     //printBits(tag, 4*strlen(hexString));
+    /* Search for tag in set setIndex */
+    bool hit = false;
+    int currentLine = -1;
+    for (int i = 0; i < linesPerSet; i++)
+    {
+      currentLine++;
+      if (cache[setIndex][i][0] == 1)
+      {
+        if (cache[setIndex][i][1] == tag)
+        {
+          cacheHits++;
+          hit = true;
+          break;
+        }
+      }
+    }
     if (action == 'R')
     {
-      for (int i = 0; i < linesPerSet; i++)
+      if (!hit)
       {
-        if (cache[setIndex][i][0] == 1)
-        {
-          if (cache[setIndex][i][1] == tag)
-          {
-            cacheHits++;
-          }
-        }
-        else // cache[setIndex][i][0] == 0
-        {
-          cacheMiss++;
-          cache[setIndex][i][0] = 1;
-          cache[setIndex][i][1] = tag;
-        }
+        cacheMiss++;
+        // read directly from memory to cache
+        cache[setIndex][currentLine][0] = 1;
+        cache[setIndex][currentLine][1] = tag;
+        memReads++;
       }
     }
     else // action == 'W'
     {
-
+      if (hit)
+      {
+        memWrites++;
+      }
+      else // (!hit)
+      {
+        cacheMiss++;
+        // read directly from memory to cache
+        cache[setIndex][currentLine][0] = 1;
+        cache[setIndex][currentLine][1] = tag;
+        memReads++;
+        // update line in cache
+        memWrites++;
+      }
     }
   }
 
