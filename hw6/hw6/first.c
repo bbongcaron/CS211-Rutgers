@@ -19,7 +19,7 @@ int cacheMiss = 0;
 
 typedef struct Line
 {
-  bool valid;
+  bool isValid;
   int tag;
   int data;
 }Line;
@@ -27,7 +27,7 @@ typedef struct Line
 typedef struct Set
 {
   int numValidLines;
-  Line* lines;
+  Line* line;
   int* lfu;
   int* fifo;
 }Set;
@@ -35,7 +35,7 @@ typedef struct Set
 typedef struct Cache{
   int numSets;
   int linesPerSet;
-  Set* sets;
+  Set* set;
 }Cache;
 
 int main(int argc, char* argv[])
@@ -169,29 +169,29 @@ void freeCache(Cache cache)
 {
   for (int i = 0; i < cache.numSets; i++)
   {
-    free(cache.sets[i].lfu);
-    free(cache.sets[i].fifo);
-    free(cache.sets[i].lines);
+    free(cache.set[i].lfu);
+    free(cache.set[i].fifo);
+    free(cache.set[i].line);
   }
-  free(cache.sets);
+  free(cache.set);
 }
 
 Cache initializeCache(int numSets, int linesPerSet)
 {
   Cache cache;
   cache.numSets = numSets;
-  cache.sets = malloc(sizeof(Set)*numSets);
+  cache.set = malloc(sizeof(Set)*numSets);
   for (int i = 0; i < numSets; i++)
   {
-    cache.sets[i].lfu = malloc(sizeof(int)*linesPerSet);
-    cache.sets[i].fifo = malloc(sizeof(int)*linesPerSet);
-    cache.sets[i].numValidLines = 0;
-    cache.sets[i].lines = malloc(sizeof(Line)*linesPerSet);
+    cache.set[i].lfu = malloc(sizeof(int)*linesPerSet);
+    cache.set[i].fifo = malloc(sizeof(int)*linesPerSet);
+    cache.set[i].numValidLines = 0;
+    cache.set[i].line = malloc(sizeof(Line)*linesPerSet);
     for (int j = 0; j < linesPerSet; j++)
     {
-      cache.sets[i].lines[j].valid = false;
-      cache.sets[i].lines[j].tag = 0;
-      cache.sets[i].lines[j].data = 0;
+      cache.set[i].line[j].isValid = false;
+      cache.set[i].line[j].tag = 0;
+      cache.set[i].line[j].data = 0;
     }
   }
   return cache;
@@ -233,27 +233,6 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
   Cache cache = initializeCache(numSets, linesPerSet);
   //printf("%d %d %d\n", cache.sets[0].numValidLines = 30, cache.sets[0].lines[0].tag = 60, cache.sets[0].lines[0].data = 90);
 
-  freeCache(cache);
-  return;
-  /*
-  int*** cache = malloc(sizeof(int**)*numSets);
-  for (int i = 0; i < numSets; i++)
-  {
-    cache[i] = malloc(sizeof(int*)*linesPerSet);
-    for (int j = 0; j < linesPerSet; j++)
-    {
-      // cache[i][j][0] is the valid bit in set i, line j
-      // cache[i][j][1] is the tag in set i, line j
-      // cache[i][j][2] is the data in set i, line j
-        // although data isn't implemented in a trace
-      cache[i][j] = malloc(sizeof(int)*3);
-      for (int k = 0; k < 3; k++)
-      {
-        cache[i][j][k] = 0;
-      }
-
-    }
-  }
   int programCount = 0;
   char action = '\0';
   int cacheData = 0;
@@ -285,9 +264,9 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
     for (int i = 0; i < linesPerSet; i++)
     {
       currentLine++;
-      if (cache[setIndex][i][0] == 1)
+      if (cache.set[setIndex].line[i].isValid)
       {
-        if (cache[setIndex][i][1] == tag)
+        if (cache.set[setIndex].line[i].tag == tag)
         {
           cacheHits++;
           hit = true;
@@ -301,8 +280,8 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
       {
         cacheMiss++;
         // read directly from memory to cache
-        cache[setIndex][currentLine][0] = 1;
-        cache[setIndex][currentLine][1] = tag;
+        cache.set[setIndex].line[currentLine].isValid = true;
+        cache.set[setIndex].line[currentLine].tag = tag;
         memReads++;
       }
     }
@@ -316,15 +295,13 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
       {
         cacheMiss++;
         // read directly from memory to cache
-        cache[setIndex][currentLine][0] = 1;
-        cache[setIndex][currentLine][1] = tag;
+        cache.set[setIndex].line[currentLine].isValid = 1;
+        cache.set[setIndex].line[currentLine].tag = tag;
         memReads++;
         // update line in cache
         memWrites++;
       }
     }
   }
-
-  freeCache(cache, numSets, linesPerSet);
-  */
+  freeCache(cache);
 }
