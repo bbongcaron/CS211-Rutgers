@@ -3,6 +3,41 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
+bool isPowerOf2(int num);
+bool isInt(char* num);
+bool isLegit(char* cacheSize, char* associativity, char* replacePolicy, char* blockSize);
+void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile);
+
+int main(int argc, char* argv[])
+{
+  if (!isLegit(argv[1], argv[2], argv[3], argv[4]))
+  {
+    printf("error\n");
+    return 0;
+  }
+  int cacheSize = atoi(argv[1]);
+  char* associativity = argv[2];
+  char* replacePolicy = argv[3];
+  int blockSize = atoi(argv[4]);
+  FILE* traceFile = fopen(argv[5], "r");
+
+
+  if (strcmp(associativity, "direct") == 0)
+  {
+    directCache(cacheSize, blockSize, replacePolicy, traceFile);
+  }
+  else if (strcmp(associativity, "assoc") == 0)
+  {
+
+  }
+  else
+  {
+
+  }
+  fclose(traceFile);
+  return 0;
+}
 
 bool isPowerOf2(int num)
 {
@@ -31,14 +66,19 @@ bool isInt(char* num)
   }
   return true;
 }
-bool isLegit(int cacheSize, char* associativity, char* replacePolicy, int blockSize)
+
+bool isLegit(char* cacheSize, char* associativity, char* replacePolicy, char* blockSize)
 {
-  if (!isPowerOf2(cacheSize) || !isPowerOf2(blockSize))
+  if (!isInt(cacheSize) || !isInt(blockSize))
   {
     return false;
   }
-  //printf("cacheSize = %d is legit.\n", cacheSize);
-  //printf("blockSize = %d is legit.\n", blockSize);
+  if (!isPowerOf2(atoi(cacheSize)) || !isPowerOf2(atoi(blockSize)))
+  {
+    return false;
+  }
+  //printf("cacheSize = %s is legit.\n", cacheSize);
+  //printf("blockSize = %s is legit.\n", blockSize);
   if (strcmp(replacePolicy, "lru") != 0 && strcmp(replacePolicy, "fifo") != 0)
   {
     return false;
@@ -66,22 +106,37 @@ bool isLegit(int cacheSize, char* associativity, char* replacePolicy, int blockS
   return true;
 }
 
-int main(int argc, char* argv[])
+void directCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile)
 {
-  if (!isInt(argv[1]) || !isInt(argv[4]))
-  {
-    printf("error\n");
-    return 0;
-  }
-  int cacheSize = atoi(argv[1]);
-  char* associativity = argv[2];
-  char* replacePolicy = argv[3];
-  int blockSize = atoi(argv[4]);
-  FILE* traceFile = fopen(argv[5], 'r');
+  // 12 bytes (48-bit) memory addresses
 
-  if (!isLegit(cacheSize, associativity, replacePolicy, blockSize))
+  int linesPerSet = 1; //property of directCache
+  int numSets = (cacheSize) / (linesPerSet*blockSize);
+  int setBits = log10(numSets) / log10(2);
+  int dataBits = log10(blockSize) / log10(2);
+  int tagBits = 48 - setBits - dataBits;
+  // Initialize the cache
+  int** cache = malloc(sizeof(int*)*numSets);
+  for (int i = 0; i < numSets; i++)
   {
-    printf("error\n");
-    return 0;
+    cache[i] = malloc(sizeof(int)*48);
   }
+
+  int programCount = 0;
+  char action = '\0';
+  int cacheData = 0;
+  while (fscanf(traceFile, "%X: %c %X", &programCount, &action, &cacheData))
+  {
+    //printf("0x%X: %c 0x%X\n", programCount, action, cacheData);
+    if (action == 'R')
+    {
+
+    }
+    else // action == 'W'
+    {
+
+    }
+  }
+  //printf("#EOF\n");
+
 }
