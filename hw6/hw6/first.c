@@ -5,12 +5,8 @@
 #include <ctype.h>
 #include <math.h>
 
-bool isPowerOf2(int num);
-bool isInt(char* num);
 bool isLegit(char* cacheSize, char* associativity, char* replacePolicy, char* blockSize);
 void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile, char* associativity);
-int getBit(int x, int n);
-void setBit(int* x, int n, int v);
 
 int memReads = 0;
 int memWrites = 0;
@@ -29,7 +25,7 @@ typedef struct Set
   int numValidLines;
   Line* line;
   int* lfu;
-  int* fifo;
+  int fifo;
 }Set;
 
 typedef struct Cache{
@@ -170,7 +166,6 @@ void freeCache(Cache cache)
   for (int i = 0; i < cache.numSets; i++)
   {
     free(cache.set[i].lfu);
-    free(cache.set[i].fifo);
     free(cache.set[i].line);
   }
   free(cache.set);
@@ -180,11 +175,16 @@ Cache initializeCache(int numSets, int linesPerSet)
 {
   Cache cache;
   cache.numSets = numSets;
+  cache.linesPerSet = linesPerSet;
   cache.set = malloc(sizeof(Set)*numSets);
   for (int i = 0; i < numSets; i++)
   {
     cache.set[i].lfu = malloc(sizeof(int)*linesPerSet);
-    cache.set[i].fifo = malloc(sizeof(int)*linesPerSet);
+    for (int j = 0; j < linesPerSet; j++)
+    {
+      cache.set[i].lfu[j] = j;
+    }
+    cache.set[i].fifo = 0;
     cache.set[i].numValidLines = 0;
     cache.set[i].line = malloc(sizeof(Line)*linesPerSet);
     for (int j = 0; j < linesPerSet; j++)
@@ -197,6 +197,79 @@ Cache initializeCache(int numSets, int linesPerSet)
   return cache;
 }
 
+void deleteElement(int* array, int length, int target)
+{
+  for (int i = 0; i < length; i++)
+  {
+    if (array[i] == target)
+    {
+      for (int j = i; j < length - 1; j++)
+      {
+        array[j] = array[j+1];
+      }
+      return;
+    }
+  }
+}
+
+void shiftLeft(int* array, int length)
+{
+  for (int i = 1; i < length; i++)
+  {
+    array[i-1] = array[i];
+  }
+}
+
+void updateLRU(Cache* cache, bool isHit, int setIndex, int tag, int i)
+{
+  if (isHit)
+  {
+    deleteElement(cache->set[setIndex].lfu, cache->set[setIndex].numValidLines, i);
+    cache->set[setIndex].lfu[cache->set[setIndex].numValidLines - 1] = i;
+    cache->set[setIndex].line[cache->set[setIndex].numValidLines - 1].isValid = true;
+    cache->set[setIndex].line[cache->set[setIndex].numValidLines - 1].tag = tag;
+  }
+  else // (!isHit)
+  {
+    // need to decide which line to evict
+    // Check if there is room in the set before deciding to evict
+    if (cache->set[setIndex].numValidLines < cache->linesPerSet)
+    {
+      // if a set still has not been completely filled with valid lines
+      // update the lowest index free line
+      cache->set[setIndex].line[cache->set[setIndex].numValidLines].isValid = true;
+      cache->set[setIndex].line[cache->set[setIndex].numValidLines].tag = tag;
+      // the lowest index free line is now the most recently used
+      // Higher indexes mean more recently used
+      cache->set[setIndex].lfu[cache->set[setIndex].numValidLines] = cache->set[setIndex].numValidLines;
+      // now have an additional vaild line
+      cache->set[setIndex].numValidLines++;
+    }
+    else // cache.set[setIndex].numValidLines >= linesPerSet
+    {
+      // get the index of the line to be replaced
+      int replaceLine = cache->set[setIndex].lfu[0];
+      // shift all elements of the lfu array to the left by 1
+      shiftLeft(cache->set[setIndex].lfu, cache->linesPerSet - 1);
+      // the replaceLine is now the most recently used
+      cache->set[setIndex].lfu[cache->linesPerSet - 1] = replaceLine;
+      // update that line in cache
+      cache->set[setIndex].line[replaceLine].isValid = true;
+      cache->set[setIndex].line[replaceLine].tag = tag;
+    }
+  }
+}
+
+void updateFIFO(Cache* cache, int setIndex, int tag)
+{
+  cache->set[setIndex].line[cache->set[setIndex].fifo].tag = tag;
+  cache->set[setIndex].line[cache->set[setIndex].fifo].isValid = true;
+  cache->set[setIndex].fifo++;
+  if (cache->set[setIndex].fifo >= cache->linesPerSet)
+  {
+    cache->set[setIndex].fifo = 0;
+  }
+}
 void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile, char* associativity)
 {
   // 12 bytes (48-bit) memory addresses
@@ -206,6 +279,7 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
   int setBits;
   int dataBits;
   int tagBits;
+  // Determine the associativity of the cache //
   if (strcmp(associativity, "direct") == 0)
   {
     linesPerSet = 1; // property of directCache
@@ -224,22 +298,18 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
     //printf("assoc:%d\n", linesPerSet);
     numSets = (cacheSize) / (linesPerSet*blockSize);
   }
-  setBits = log10(numSets) / log10(2);
-  dataBits = log10(blockSize) / log10(2);
+  setBits = log10(numSets) / log10(2); // 6
+  dataBits = log10(blockSize) / log10(2); // 3
   tagBits = 48 - setBits - dataBits;
-  /*
-    Initialize Cache
-  */
+  /* Initialize Cache */
   Cache cache = initializeCache(numSets, linesPerSet);
   //printf("%d %d %d\n", cache.sets[0].numValidLines = 30, cache.sets[0].lines[0].tag = 60, cache.sets[0].lines[0].data = 90);
-
   int programCount = 0;
   char action = '\0';
   int cacheData = 0;
-
   while (fscanf(traceFile, "%X: %c %X", &programCount, &action, &cacheData))
   {
-    // printf("0x%X: %c 0x%X\n", programCount, action, cacheData);
+    //printf("0x%X: %c 0x%X\n", programCount, action, cacheData);
     // string representation of cacheData
     // length shows the length up to which the rest of tag is all zeros
     char hexString[13] = "\0";
@@ -256,22 +326,21 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
     {
       setBit(&tag, i - dataBits - setBits, getBit(cacheData, i));
     }
-    //printf("tag of %x : \t", cacheData);
-    //printBits(tag, 4*strlen(hexString));
+    // printf("tag of %x : \t", cacheData);
+    // printBits(tag, 4*strlen(hexString));
     // Search for tag in set setIndex //
     bool hit = false;
-    int currentLine = -1;
     for (int i = 0; i < linesPerSet; i++)
     {
-      currentLine++;
-      if (cache.set[setIndex].line[i].isValid)
+      if (cache.set[setIndex].line[i].isValid && cache.set[setIndex].line[i].tag == tag)
       {
-        if (cache.set[setIndex].line[i].tag == tag)
-        {
           cacheHits++;
           hit = true;
+          if (strcmp(replacePolicy, "lru") == 0)
+          {
+            updateLRU(&cache, hit, setIndex, tag, i);
+          }
           break;
-        }
       }
     }
     if (action == 'R')
@@ -279,9 +348,15 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
       if (!hit)
       {
         cacheMiss++;
+        if (strcmp(replacePolicy, "lru") == 0)
+        {
+          updateLRU(&cache, hit, setIndex, tag, -1);
+        }
+        else // strcmp(replacePolicy, "fifo") == 0
+        {
+          updateFIFO(&cache, setIndex, tag);
+        }
         // read directly from memory to cache
-        cache.set[setIndex].line[currentLine].isValid = true;
-        cache.set[setIndex].line[currentLine].tag = tag;
         memReads++;
       }
     }
@@ -295,8 +370,15 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
       {
         cacheMiss++;
         // read directly from memory to cache
-        cache.set[setIndex].line[currentLine].isValid = 1;
-        cache.set[setIndex].line[currentLine].tag = tag;
+        // need to decide which line to evict
+        if (strcmp(replacePolicy, "lru") == 0)
+        {
+          updateLRU(&cache, hit, setIndex, tag, -1);
+        }
+        else // strcmp(replacePolicy, "fifo") == 0
+        {
+          updateFIFO(&cache, setIndex, tag);
+        }
         memReads++;
         // update line in cache
         memWrites++;
