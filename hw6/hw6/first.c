@@ -318,11 +318,7 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
     //printf("0x%s\n", hexString);
     //printf("0x%lx\t: %c\t 0x%lx\t", programCount, action, cacheData);
     // Get the set # that the data will be stored in //
-    size_t setIndex = 0;
-    for (int i = dataBits; i <= 47 - tagBits; i++)
-    {
-      setBit(&setIndex, i - dataBits, getBit(address, i));
-    }
+    int setIndex = (int)((address>>dataBits) % (int)(pow(2,(double)setBits)));
     // Get the tag of the data //
     size_t tag = address>>(dataBits+setBits);
     //printf("tag of %lx : \t", cacheData);
