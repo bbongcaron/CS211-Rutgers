@@ -279,7 +279,7 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
   int numSets;
   int setBits;
   int dataBits;
-  int tagBits;
+  //int tagBits;
   // Determine the associativity of the cache //
   if (strcmp(associativity, "direct") == 0)
   {
@@ -311,11 +311,6 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
   size_t address = 0;
   while (fscanf(traceFile, "%lx: %c %lx", &programCount, &action, &address))
   {
-    // string representation of cacheData
-    // length shows the length up to which the rest of tag is all zeros
-    char hexString[13] = "\0";
-    sprintf(hexString, "%lx", address);
-    //printf("0x%s\n", hexString);
     //printf("0x%lx\t: %c\t 0x%lx\t", programCount, action, cacheData);
     // Get the set # that the data will be stored in //
     int setIndex = (int)((address>>dataBits) % (int)(pow(2,(double)setBits)));
