@@ -199,13 +199,13 @@ Cache initializeCache(int numSets, int linesPerSet)
 
 void deleteElement(int* array, int length, int target)
 {
-  for (int i = 0; i < length; i++)
+  for (int i = 0; i < length - 1; i++)
   {
     if (array[i] == target)
     {
-      for (int j = i; j < length - 1; j++)
+      for (int j = i + 1; j < length; j++)
       {
-        array[j] = array[j+1];
+        array[j-1] = array[j];
       }
       return;
     }
@@ -250,7 +250,7 @@ void updateLRU(Cache* cache, bool isHit, int setIndex, size_t tag, int i)
       // get the index of the line to be replaced
       int replaceLine = cache->set[setIndex].lfu[0];
       // shift all elements of the lfu array to the left by 1
-      shiftLeft(cache->set[setIndex].lfu, cache->linesPerSet - 1);
+      shiftLeft(cache->set[setIndex].lfu, cache->linesPerSet);
       // the replaceLine is now the most recently used
       cache->set[setIndex].lfu[cache->linesPerSet - 1] = replaceLine;
       // update that line in cache
@@ -300,9 +300,9 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
     //printf("assoc:%d\n", linesPerSet);
     numSets = (cacheSize) / (linesPerSet*blockSize);
   }
-  setBits = log10(numSets) / log10(2); // 6
-  dataBits = log10(blockSize) / log10(2); // 3
-  tagBits = 48 - setBits - dataBits;
+  setBits = log10(numSets) / log10(2);
+  dataBits = log10(blockSize) / log10(2);
+  // tagBits = 48 - setBits - dataBits;
   /* Initialize Cache */
   Cache cache = initializeCache(numSets, linesPerSet);
   //printf("%d %d %d\n", cache.sets[0].numValidLines = 30, cache.sets[0].lines[0].tag = 60, cache.sets[0].lines[0].data = 90);
