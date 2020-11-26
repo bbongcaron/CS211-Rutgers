@@ -36,7 +36,7 @@ typedef struct Cache{
 
 int main(int argc, char* argv[])
 {
-  if (!isLegit(argv[1], argv[2], argv[3], argv[4]))
+  if (argc != 6 || !isLegit(argv[1], argv[2], argv[3], argv[4]))
   {
     printf("error\n");
     return 0;
