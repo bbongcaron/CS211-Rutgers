@@ -16,7 +16,7 @@ int cacheMiss = 0;
 typedef struct Line
 {
   bool isValid;
-  int tag;
+  size_t tag;
   int data;
 }Line;
 
@@ -124,7 +124,7 @@ bool isLegit(char* cacheSize, char* associativity, char* replacePolicy, char* bl
   return true;
 }
 
-int getBit(int x, int n)
+int getBit(size_t x, int n)
 {
   if ((x & (1 << n)) == 0)
   {
@@ -133,32 +133,32 @@ int getBit(int x, int n)
   return 1;
 }
 
-void setBit(int* x, int n, int v)
+void setBit(size_t* x, int n, int v)
 {
   if (v == 0)
   {
     // the complement of 1 << n would result in every bit except the nth bit
     // being 1 and the nth bit being 0
     //printf("n = %hd\n", n);
-    int bitSetter = ~(1 << n);
+    size_t bitSetter = ~(1 << n);
     //printf("%hd\n", bitSetter);
     *x = *x & bitSetter;
   }
   else if (v == 1)
   {
     // every bit except the nth bit is 0; nth bit is 1
-    int bitSetter = 1 << n;
+    size_t bitSetter = 1 << n;
     *x = *x | bitSetter;
   }
 }
 
-void printBits(int x, int length)
+void printBits(size_t x, int length)
 {
   for (int i = length - 1; i >= 0; i--)
   {
     printf("%d", getBit(x, i));
   }
-  printf(" = %d\n", x);
+  printf(" = %lx\n", x);
 }
 
 void freeCache(Cache cache)
@@ -220,7 +220,7 @@ void shiftLeft(int* array, int length)
   }
 }
 
-void updateLRU(Cache* cache, bool isHit, int setIndex, int tag, int i)
+void updateLRU(Cache* cache, bool isHit, int setIndex, size_t tag, int i)
 {
   if (isHit)
   {
@@ -260,7 +260,7 @@ void updateLRU(Cache* cache, bool isHit, int setIndex, int tag, int i)
   }
 }
 
-void updateFIFO(Cache* cache, int setIndex, int tag)
+void updateFIFO(Cache* cache, int setIndex, size_t tag)
 {
   cache->set[setIndex].line[cache->set[setIndex].fifo].tag = tag;
   cache->set[setIndex].line[cache->set[setIndex].fifo].isValid = true;
@@ -270,6 +270,7 @@ void updateFIFO(Cache* cache, int setIndex, int tag)
     cache->set[setIndex].fifo = 0;
   }
 }
+
 void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile, char* associativity)
 {
   // 12 bytes (48-bit) memory addresses
@@ -285,7 +286,8 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
     linesPerSet = 1; // property of directCache
     numSets = (cacheSize) / (linesPerSet*blockSize);
   }
-  else if (strcmp(associativity, "assoc") == 0) {
+  else if (strcmp(associativity, "assoc") == 0)
+  {
     // only 1 set, no set bits required
     numSets = 1; // property of fully associative cache
     linesPerSet = (cacheSize) / (numSets*blockSize);
@@ -304,30 +306,27 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
   /* Initialize Cache */
   Cache cache = initializeCache(numSets, linesPerSet);
   //printf("%d %d %d\n", cache.sets[0].numValidLines = 30, cache.sets[0].lines[0].tag = 60, cache.sets[0].lines[0].data = 90);
-  int programCount = 0;
+  size_t programCount = 0;
   char action = '\0';
-  int cacheData = 0;
-  while (fscanf(traceFile, "%X: %c %X", &programCount, &action, &cacheData))
+  size_t address = 0;
+  while (fscanf(traceFile, "%lx: %c %lx", &programCount, &action, &address))
   {
-    //printf("0x%X: %c 0x%X\n", programCount, action, cacheData);
     // string representation of cacheData
     // length shows the length up to which the rest of tag is all zeros
     char hexString[13] = "\0";
-    sprintf(hexString, "%X", cacheData);
+    sprintf(hexString, "%lx", address);
+    //printf("0x%s\n", hexString);
+    //printf("0x%lx\t: %c\t 0x%lx\t", programCount, action, cacheData);
     // Get the set # that the data will be stored in //
-    int setIndex = 0;
+    size_t setIndex = 0;
     for (int i = dataBits; i <= 47 - tagBits; i++)
     {
-      setBit(&setIndex, i - dataBits, getBit(cacheData, i));
+      setBit(&setIndex, i - dataBits, getBit(address, i));
     }
     // Get the tag of the data //
-    int tag = 0;
-    for (int i = dataBits + setBits; i < 4*strlen(hexString); i++)
-    {
-      setBit(&tag, i - dataBits - setBits, getBit(cacheData, i));
-    }
-    // printf("tag of %x : \t", cacheData);
-    // printBits(tag, 4*strlen(hexString));
+    size_t tag = address>>(dataBits+setBits);
+    //printf("tag of %lx : \t", cacheData);
+    //printBits(tag, 4*strlen(hexString));
     // Search for tag in set setIndex //
     bool hit = false;
     for (int i = 0; i < linesPerSet; i++)
