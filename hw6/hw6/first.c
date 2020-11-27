@@ -24,7 +24,7 @@ typedef struct Set
 {
   int numValidLines;
   Line* line;
-  int* lfu;
+  int* lru;
   int fifo;
 }Set;
 
@@ -95,13 +95,10 @@ bool isLegit(char* cacheSize, char* associativity, char* replacePolicy, char* bl
   {
     return false;
   }
-  //printf("cacheSize = %s is legit.\n", cacheSize);
-  //printf("blockSize = %s is legit.\n", blockSize);
   if (strcmp(replacePolicy, "lru") != 0 && strcmp(replacePolicy, "fifo") != 0)
   {
     return false;
   }
-  //printf("replacePolicy = %s is legit.\n", replacePolicy);
   char temp[20] = "\0";
   strcpy(temp, associativity);
   if (strcmp(associativity, "direct") != 0 && strcmp(associativity, "assoc") != 0)
@@ -120,52 +117,14 @@ bool isLegit(char* cacheSize, char* associativity, char* replacePolicy, char* bl
       }
     }
   }
-  //printf("associativity = %s is legit.\n", associativity);
   return true;
-}
-
-int getBit(size_t x, int n)
-{
-  if ((x & (1 << n)) == 0)
-  {
-    return 0;
-  }
-  return 1;
-}
-
-void setBit(size_t* x, int n, int v)
-{
-  if (v == 0)
-  {
-    // the complement of 1 << n would result in every bit except the nth bit
-    // being 1 and the nth bit being 0
-    //printf("n = %hd\n", n);
-    size_t bitSetter = ~(1 << n);
-    //printf("%hd\n", bitSetter);
-    *x = *x & bitSetter;
-  }
-  else if (v == 1)
-  {
-    // every bit except the nth bit is 0; nth bit is 1
-    size_t bitSetter = 1 << n;
-    *x = *x | bitSetter;
-  }
-}
-
-void printBits(size_t x, int length)
-{
-  for (int i = length - 1; i >= 0; i--)
-  {
-    printf("%d", getBit(x, i));
-  }
-  printf(" = %lx\n", x);
 }
 
 void freeCache(Cache cache)
 {
   for (int i = 0; i < cache.numSets; i++)
   {
-    free(cache.set[i].lfu);
+    free(cache.set[i].lru);
     free(cache.set[i].line);
   }
   free(cache.set);
@@ -179,20 +138,10 @@ Cache initializeCache(int numSets, int linesPerSet)
   cache.set = malloc(sizeof(Set)*numSets);
   for (int i = 0; i < numSets; i++)
   {
-    cache.set[i].lfu = malloc(sizeof(int)*linesPerSet);
-    for (int j = 0; j < linesPerSet; j++)
-    {
-      cache.set[i].lfu[j] = j;
-    }
+    cache.set[i].lru = malloc(sizeof(int)*linesPerSet);
     cache.set[i].fifo = 0;
     cache.set[i].numValidLines = 0;
     cache.set[i].line = malloc(sizeof(Line)*linesPerSet);
-    for (int j = 0; j < linesPerSet; j++)
-    {
-      cache.set[i].line[j].isValid = false;
-      cache.set[i].line[j].tag = 0;
-      cache.set[i].line[j].data = 0;
-    }
   }
   return cache;
 }
@@ -224,10 +173,10 @@ void updateLRU(Cache* cache, bool isHit, int setIndex, size_t tag, int i)
 {
   if (isHit)
   {
-    deleteElement(cache->set[setIndex].lfu, cache->set[setIndex].numValidLines, i);
-    cache->set[setIndex].lfu[cache->set[setIndex].numValidLines - 1] = i;
-    cache->set[setIndex].line[cache->set[setIndex].numValidLines - 1].isValid = true;
-    cache->set[setIndex].line[cache->set[setIndex].numValidLines - 1].tag = tag;
+    deleteElement(cache->set[setIndex].lru, cache->set[setIndex].numValidLines, i);
+    cache->set[setIndex].lru[cache->set[setIndex].numValidLines - 1] = i;
+    cache->set[setIndex].line[i].isValid = true;
+    cache->set[setIndex].line[i].tag = tag;
   }
   else // (!isHit)
   {
@@ -241,18 +190,18 @@ void updateLRU(Cache* cache, bool isHit, int setIndex, size_t tag, int i)
       cache->set[setIndex].line[cache->set[setIndex].numValidLines].tag = tag;
       // the lowest index free line is now the most recently used
       // Higher indexes mean more recently used
-      cache->set[setIndex].lfu[cache->set[setIndex].numValidLines] = cache->set[setIndex].numValidLines;
+      cache->set[setIndex].lru[cache->set[setIndex].numValidLines] = cache->set[setIndex].numValidLines;
       // now have an additional vaild line
       cache->set[setIndex].numValidLines++;
     }
     else // cache.set[setIndex].numValidLines >= linesPerSet
     {
       // get the index of the line to be replaced
-      int replaceLine = cache->set[setIndex].lfu[0];
+      int replaceLine = cache->set[setIndex].lru[0];
       // shift all elements of the lfu array to the left by 1
-      shiftLeft(cache->set[setIndex].lfu, cache->linesPerSet);
+      shiftLeft(cache->set[setIndex].lru, cache->linesPerSet);
       // the replaceLine is now the most recently used
-      cache->set[setIndex].lfu[cache->linesPerSet - 1] = replaceLine;
+      cache->set[setIndex].lru[cache->linesPerSet - 1] = replaceLine;
       // update that line in cache
       cache->set[setIndex].line[replaceLine].isValid = true;
       cache->set[setIndex].line[replaceLine].tag = tag;
@@ -273,13 +222,10 @@ void updateFIFO(Cache* cache, int setIndex, size_t tag)
 
 void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* traceFile, char* associativity)
 {
-  // 12 bytes (48-bit) memory addresses
-  // 1 LINE PER SET IN A DIRECT CACHE
   int linesPerSet;
   int numSets;
   int setBits;
   int dataBits;
-  //int tagBits;
   // Determine the associativity of the cache //
   if (strcmp(associativity, "direct") == 0)
   {
@@ -297,27 +243,21 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
     char* token = strtok(associativity, ":");
     token = strtok(NULL, ":");
     linesPerSet = atoi(token);
-    //printf("assoc:%d\n", linesPerSet);
     numSets = (cacheSize) / (linesPerSet*blockSize);
   }
   setBits = log10(numSets) / log10(2);
   dataBits = log10(blockSize) / log10(2);
-  // tagBits = 48 - setBits - dataBits;
   /* Initialize Cache */
   Cache cache = initializeCache(numSets, linesPerSet);
-  //printf("%d %d %d\n", cache.sets[0].numValidLines = 30, cache.sets[0].lines[0].tag = 60, cache.sets[0].lines[0].data = 90);
   size_t programCount = 0;
   char action = '\0';
-  size_t address = 0;
+  size_t address = 0; // 12 bytes (48-bit) memory addresses
   while (fscanf(traceFile, "%lx: %c %lx", &programCount, &action, &address))
   {
-    //printf("0x%lx\t: %c\t 0x%lx\t", programCount, action, cacheData);
     // Get the set # that the data will be stored in //
     int setIndex = (int)((address>>dataBits) % (int)(pow(2,(double)setBits)));
     // Get the tag of the data //
     size_t tag = address>>(dataBits+setBits);
-    //printf("tag of %lx : \t", cacheData);
-    //printBits(tag, 4*strlen(hexString));
     // Search for tag in set setIndex //
     bool hit = false;
     for (int i = 0; i < linesPerSet; i++)
@@ -327,9 +267,7 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
           cacheHits++;
           hit = true;
           if (strcmp(replacePolicy, "lru") == 0)
-          {
             updateLRU(&cache, hit, setIndex, tag, i);
-          }
           break;
       }
     }
@@ -339,39 +277,24 @@ void simulateCache(int cacheSize, int blockSize, char* replacePolicy, FILE* trac
       {
         cacheMiss++;
         if (strcmp(replacePolicy, "lru") == 0)
-        {
           updateLRU(&cache, hit, setIndex, tag, -1);
-        }
-        else // strcmp(replacePolicy, "fifo") == 0
-        {
+        else
           updateFIFO(&cache, setIndex, tag);
-        }
-        // read directly from memory to cache
-        memReads++;
+        memReads++; // missed, therefore read directly from memory to cache
       }
     }
     else // action == 'W'
     {
-      if (hit)
-      {
-        memWrites++;
-      }
+      if (hit) memWrites++; // old data already in cache, just overwrite memory
       else // (!hit)
       {
-        cacheMiss++;
-        // read directly from memory to cache
-        // need to decide which line to evict
+        cacheMiss++; // need to read directly old memory to cache
         if (strcmp(replacePolicy, "lru") == 0)
-        {
           updateLRU(&cache, hit, setIndex, tag, -1);
-        }
         else // strcmp(replacePolicy, "fifo") == 0
-        {
           updateFIFO(&cache, setIndex, tag);
-        }
-        memReads++;
-        // update line in cache
-        memWrites++;
+        memReads++; // update line in cache with previous memory data
+        memWrites++; // overwrite memory
       }
     }
   }
