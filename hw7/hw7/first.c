@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <math.h>
+#include <stdbool.h>
 typedef struct Gate
 {
   /* a Gate strcut to build the circuit with */
@@ -13,8 +14,10 @@ typedef struct Gate
 } Gate;
 
 Gate* buildCircuit(FILE* circuit_file);
+int** buildTruthTable(int numInputs, int numOutputs);
 void freeCircuit(Gate* circuit);
-void freeMatrix(char** matrix, int numElements);
+void freeMatrix(void** matrix, int numRows);
+void printTruthTable(int** truthTable, int numRows, int numCols);
 
 int main(int argc, char* argv[argc+1])
 {
@@ -46,18 +49,39 @@ int main(int argc, char* argv[argc+1])
   printf("\n");
   /* scan circuit instructions */
   circuit = buildCircuit(circuit_file);
+  /* Initialize output truth table */
+  int** truthTable = buildTruthTable(numInputs, numOutputs);
+
+  // need code here to calculate outputs
+
+  /* Print out resulting truth table */
+  printTruthTable(truthTable, (int)(pow(2, numInputs)), numInputs + numOutputs);
   /* Free all malloc'ed stuff */
   freeMatrix(inVars, numInputs);
   freeMatrix(outVars, numOutputs);
+  freeMatrix(truthTable, (int)(pow(2, numInputs)));
   freeCircuit(circuit);
   fclose(circuit_file);
   return EXIT_SUCCESS;
 }
 
-void freeMatrix(char** matrix, int numElements)
+void printTruthTable(int** truthTable, int numRows, int numCols)
 {
-  /* Free matrix of char strings */
-  for (int i = 0; i < numElements; i++)
+  for(int i = 0; i < numRows; i++)
+  {
+    printf("%d", truthTable[i][0]);
+    for (int j = 1; j < numCols; j++)
+    {
+      printf(" %d", truthTable[i][j]);
+    }
+    printf("\n");
+  }
+}
+
+void freeMatrix(void** matrix, int numRows)
+{
+  /* Free double array */
+  for (int i = 0; i < numRows; i++)
   {
     free(matrix[i]);
   }
@@ -75,6 +99,36 @@ void freeCircuit(Gate* circuit)
     ptr = ptr->next;
     free(prev);
   }
+}
+
+int** buildTruthTable(int numInputs, int numOutputs)
+{
+  /* Initialize empty truth table */
+  int numRows = (int)(pow(2, numInputs));
+  int numCols = numInputs + numOutputs;
+  int** truthTable = malloc(sizeof(int*)*numRows);
+  for (int i = 0; i < numRows; i++)
+  {
+    truthTable[i] = malloc(sizeof(int)*(numCols));
+  }
+  /* Fill in input columns */
+  int colsFilled = 0;
+  for (int c = numCols - 1 - numOutputs; c >= 0; c--)
+  {
+    /* Algorithm to fill in input columns */
+    int currentRow = 1;
+    bool one = false;
+    for(int r = 0; r < numRows; r++)
+    {
+      if (one) truthTable[r][c] = 1;
+      else truthTable[r][c] = 0;
+      /* currentRow MOD 2^colsFilled gives correct alternating pattern */
+      if (currentRow % (int)pow(2, colsFilled) == 0) one = !one;
+      currentRow++;
+    }
+    colsFilled++;
+  }
+  return truthTable;
 }
 
 Gate* createGate(FILE* circuit_file, char* operation)
