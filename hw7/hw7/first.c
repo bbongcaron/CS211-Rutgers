@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdbool.h>
+
 typedef struct Gate
 {
   /* a Gate strcut to build the circuit with */
@@ -12,6 +13,7 @@ typedef struct Gate
   char outputVar[100];
   struct Gate* next;
 } Gate;
+
 void freeCircuit(Gate* circuit);
 void freeCharMatrix(char** matrix, int numRows);
 void freeIntMatrix(int** matrix, int numRows);
@@ -24,11 +26,6 @@ void runCircuit(Gate* circuit, int** truthTable, char** inVars, char** outVars,
 int main(int argc, char* argv[argc+1])
 {
   /* Open circuit file */
-  if (strcmp(argv[1], "/ilab/users/bdb101/CS211-Rutgers/hw7/testcases/first/test10.txt") == 0)
-  {
-    return EXIT_SUCCESS;
-  }
-
   FILE* circuit_file = fopen(argv[1], "r");
   /* Initialize/declare necessary variables */
   char** inVars; char** outVars;
@@ -37,29 +34,23 @@ int main(int argc, char* argv[argc+1])
   /* scan INPUTVARS */
   fscanf(circuit_file, "%*s %d", &numInputs);
   inVars = malloc(sizeof(char*)*numInputs);
-  //printf("INPUTVAR %d", numInputs);
   for (int i = 0; i < numInputs; i++) {
     inVars[i] = malloc(sizeof(char)*100);
     fscanf(circuit_file, " %s", inVars[i]);
-    //printf(" %s", inVars[i]);
   }
-  //printf("\n");
   /* scan OUTPUTVARS */
   fscanf(circuit_file, "%*s %d", &numOutputs);
   outVars = malloc(sizeof(char*)*numOutputs);
-  //printf("OUTPUTVAR %d", numOutputs);
   for (int i = 0; i < numOutputs; i++) {
     outVars[i] = malloc(sizeof(char)*100);
     fscanf(circuit_file, " %s", outVars[i]);
-    //printf(" %s", outVars[i]);
   }
-  //printf("\n");
   /* scan circuit instructions */
   circuit = buildCircuit(circuit_file);
   /* Initialize output truth table */
   int** truthTable = buildTruthTable(numInputs, numOutputs);
 
-  // need code here to calculate outputs
+  /* Run the circuit for each possible input row */
   runCircuit(circuit, truthTable, inVars, outVars, numInputs, numOutputs);
   /* Print out resulting truth table */
   printTruthTable(truthTable, (int)(pow(2, numInputs)), numInputs + numOutputs);
@@ -227,15 +218,12 @@ void freeVariable(Variable* v)
   }
 }
 
-void printList(Variable* node)
+Variable* getVariable(Variable* node, char* name)
 {
   Variable* ptr = node;
-  while (ptr)
-  {
-    printf("-> %s ", ptr->name);
+  while (ptr && strcmp(ptr->name, name) != 0)
     ptr = ptr->next;
-  }
-  printf("\n");
+  return ptr;
 }
 
 void runCircuit(Gate* circuit, int** truthTable, char** inVars, char** outVars,
@@ -244,24 +232,21 @@ void runCircuit(Gate* circuit, int** truthTable, char** inVars, char** outVars,
   int numRows = (int)(pow(2, numInputs));
   for (int i = 0; i < numRows; i++)
   {
-    /* Malloc 1D arrays of Variable structs: contains names & boolean values */
+    // Malloc LL of Variable structs: contains names & boolean values //
     Variable* inputs = NULL;
     Variable* outputs = NULL;
     Variable* temps = NULL;
-    /* Assign truth values based on pre-made truth table input rows */
+    // Assign truth values based on pre-made truth table input rows //
     for (int j = 0; j < numInputs; j++)
     {
-      /* Assign input Variable names & values based on inVars & truthTable */
+      // Assign input Variable names & values based on inVars & truthTable //
       inputs = addToFront(inputs, inVars[j], truthTable[i][j], j);
     }
-    //printList(inputs);
     for (int j = 0; j < numOutputs; j++)
     {
-      /* Assign output Variable names based in outVars */
+      // Assign output Variable names based in outVars //
       outputs = addToFront(outputs, outVars[j], -1, numInputs + j);
     }
-    //printList(outputs);
-
     // Initialize gate pointer //
     Gate* currentGate = circuit;
     while (currentGate)
@@ -270,53 +255,67 @@ void runCircuit(Gate* circuit, int** truthTable, char** inVars, char** outVars,
       Variable* arg2ptr = inputs;
       Variable* outptr = outputs;
 
-      // Find indexes of Gate inputs in Variable LL to pull boolean values //
-      while (arg1ptr && strcmp(arg1ptr->name, currentGate->arg1) != 0)
-        arg1ptr = arg1ptr->next;
-
-      if (strcmp(currentGate->operation, "NOT") != 0)
-        while (arg2ptr && strcmp(arg2ptr->name, currentGate->arg2) != 0)
-          arg2ptr = arg2ptr->next;
-
-      while (outptr && strcmp(outptr->name, currentGate->outputVar) != 0)
-        outptr = outptr->next;
-
+      // Find Gate inputs/outputs in Variable LL to pull boolean values //
+      arg1ptr = getVariable(inputs, currentGate->arg1);
+      arg2ptr = getVariable(inputs, currentGate->arg2);
+      outptr = getVariable(outputs, currentGate->outputVar);
+      // Check if a temp value needs to be accessed //
+      if (!arg1ptr)
+      {
+        arg1ptr = getVariable(temps, currentGate->arg1);
+        if (!arg1ptr)
+        {
+          temps = addToFront(temps, currentGate->arg1, -1, -1);
+          arg1ptr = getVariable(temps, currentGate->arg1);
+        }
+      }
+      if (!arg2ptr && strcmp(currentGate->operation, "NOT") != 0)
+      {
+        arg2ptr = getVariable(temps, currentGate->arg2);
+        if (!arg2ptr)
+        {
+          temps = addToFront(temps, currentGate->arg2, -1, -1);
+          arg2ptr = getVariable(temps, currentGate->arg2);
+        }
+      }
+      if (!outptr)
+      {
+        outptr = getVariable(temps, currentGate->outputVar);
+        if (!outptr)
+        {
+          temps = addToFront(temps, currentGate->outputVar, -1, -1);
+          outptr = getVariable(temps, currentGate->outputVar);
+        }
+      }
+      // Perform operation on argpts and store value in outptr //
       if (strcmp(currentGate->operation, "AND") == 0)
-      {
         outptr->value = arg1ptr->value && arg2ptr->value;
-      }
       else if (strcmp(currentGate->operation, "OR") == 0)
-      {
         outptr->value = arg1ptr->value || arg2ptr->value;
-      }
       else if (strcmp(currentGate->operation, "NAND") == 0)
-      {
         outptr->value = !(arg1ptr->value && arg2ptr->value);
-      }
       else if (strcmp(currentGate->operation, "NOR") == 0)
-      {
         outptr->value = !(arg1ptr->value || arg2ptr->value);
-      }
       else if (strcmp(currentGate->operation, "NOT") == 0)
-      {
         outptr->value = !arg1ptr->value;
-      }
       else if (strcmp(currentGate->operation, "XOR") == 0)
-      {
         outptr->value = (arg1ptr->value || arg2ptr->value)
                     && !(arg1ptr->value && arg2ptr->value);
-      }
+      // Advance to the next gate //
       currentGate = currentGate->next;
     }
     // Fill in solved outputs in the corresponding truthTable row //
     for (int j = 0; j < numOutputs; j++)
     {
       Variable* outptr = outputs;
+      // Find corresponding column index in outputs linked list //
       while (outptr && outptr->truthTableColumn != (numInputs + j))
         outptr = outptr->next;
       truthTable[i][numInputs + j] = outptr->value;
     }
+    // Free malloced stuff //
     freeVariable(inputs);
     freeVariable(outputs);
+    freeVariable(temps);
     }
 }
