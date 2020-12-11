@@ -87,8 +87,8 @@ number in the hash table if it is not present. If the line starts with a `s`, yo
 value.  
 
 **Output format:** Your program should print two counts:   
-(1) the number of insertions where a collision occurred (including due to duplicate values)   
-(2) the number of successful searches (where the value was present)  
+1. the number of insertions where a collision occurred (including due to duplicate values)   
+2. the number of successful searches (where the value was present)  
 
 ### Example Execution  
 Let's assume we have a text file with the following contents:  
@@ -147,4 +147,59 @@ Executing the program in the following fashion should produce the output shown b
 $ ./bst file1.txt  
 3   4   5   6  
 ```  
+
+## Getting started  
+
+You should first download and expand the autograder and provided files (on ilab):  
+```  
+tar xvf autograder.tar  
+tar xvf hw1-provided.tar  
+```  
+The provided tarball gives you a Makefile and template .c files. You can also download these locally and then copy them to ilab
+using scp:  
+`scp *.tar yourNetID@ilab.cs.rutgers.edu:cs211` (assuming you have a cs211 directory there)  
+Note that the autograder expects `hw1` to be in the same directory as `autograder.py`, so you will have to move things to match.  
+
+## Submission  
+
+If you develop on your local machine, please be sure to test your code on ilab before submitting.  
+Please submit the assignment on Canvas as a tar file named `hw1.tar`. To create this file, put everything that you are submitting
+into a directory (folder) named `hw1`. Then, `cd` into the directory containing `hw1` (that is, `hw1`’s parent directory) and run
+the following command:  
+```
+tar cvf hw1.tar hw1  
+```
+To check that you have correctly created the tar file, you can copy it (`hw1.tar`) into an empty directory and run the following 
+command:  
+```
+tar xvf hw1.tar  
+```  
+This will re-expand your tar file and should create a directory named `hw1` in the (previously) empty directory with your code.  
+
+## Autograder  
+
+We provide an autograder in `autograder.tar` to test your assignment. Executing the following command will create the autograder 
+folder:  
+```
+tar xvf autograder.tar  
+```  
+There are two modes available for testing your assignment with the autograder.  
+### First mode  
+Testing when you are writing code with a `hw1` folder:  
+1. Let’s say you have a `hw1` folder with the directory structure as described in the assignment.  
+2. Copy the folder to the directory of the autograder.  
+3. Run the autograder with the following command:  
+```
+python autograder.py  
+```
+It will run your programs and print your scores.  
+If you are running this on your local machine and the autograder has syntax errors, you may be using Python 3. You can probably 
+run `python2 autograder.py` instead to force it to use version 2.  
+### Second mode  
+This mode is to test your final tar file before submission.  
+1. Copy `hw1.tar` to the `autograder` directory.  
+2. Run the `autograder` with `hw1.tar` as the argument:  
+```
+python autograder.py hw1.tar 
+```
 
